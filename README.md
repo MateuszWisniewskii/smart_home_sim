@@ -4,6 +4,6 @@
 - create virtual environment
 - install dependencies 
 ## how to run
-- ```python weather_api.py
-- ```streamlit run ui.py
+- ``` python weather_api.py
+- ``` streamlit run ui.py
 
