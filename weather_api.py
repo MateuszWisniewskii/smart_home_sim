@@ -34,3 +34,18 @@ def set_auto():
 
 if __name__ == "__main__":
     uvicorn.run(app, host="127.0.0.1", port=8000)
+
+
+@app.post("/weather/time/set")
+def set_time(params: dict):
+    hour = params.get("hour", 12)
+    minute = params.get("minute", 0)
+    weather.set_time(hour, minute)
+    return {"status": "ok", "time": weather.get_state()["time"]}
+
+@app.post("/weather/time/shift")
+def shift_time(params: dict):
+    hours = params.get("hours", 0)
+    minutes = params.get("minutes", 0)
+    weather.shift_time(hours=hours, minutes=minutes)
+    return {"status": "ok", "time": weather.get_state()["time"]}

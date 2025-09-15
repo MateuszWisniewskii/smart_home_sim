@@ -22,6 +22,9 @@ except Exception as e:
     weather = None
 
 if weather:
+    st.subheader(f"🕒 Aktualna godzina symulacji: {weather['time']}")
+
+if weather:
     col1, col2, col3 = st.columns(3)
     col1.metric("🌡 Temperatura [°C]", weather["temperature"])
     col2.metric("💧 Wilgotność [%]", weather["humidity"])

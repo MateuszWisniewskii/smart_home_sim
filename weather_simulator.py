@@ -72,3 +72,12 @@ class WeatherSimulator:
     def set_auto(self):
         """Wyłącz tryb ręczny, włącz symulację automatyczną."""
         self.manual_override = False
+    
+    def set_time(self, hour: int, minute: int = 0):
+        """Ustaw ręcznie godzinę w symulacji."""
+        self.current_time = self.current_time.replace(hour=hour, minute=minute)
+
+    def shift_time(self, hours: int = 0, minutes: int = 0):
+        """Przesuń czas o podaną ilość godzin/minut."""
+        self.current_time += timedelta(hours=hours, minutes=minutes)
+

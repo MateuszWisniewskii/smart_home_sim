@@ -45,3 +45,25 @@ with col2:
             st.success("Tryb automatyczny włączony!")
         except Exception as e:
             st.error(f"Błąd: {e}")
+
+st.header("🕒 Sterowanie czasem symulacji")
+
+col1, col2 = st.columns(2)
+
+with col1:
+    time_input = st.time_input("Ustaw godzinę")
+    if st.button("📌 Ustaw czas"):
+        try:
+            requests.post("http://127.0.0.1:8000/weather/time/set", json={
+                "hour": time_input.hour,
+                "minute": time_input.minute
+            })
+            st.success(f"Czas ustawiony na {time_input}")
+        except Exception as e:
+            st.error(f"Błąd: {e}")
+
+with col2:
+    if st.button("⏩ +1 godzina"):
+        requests.post("http://127.0.0.1:8000/weather/time/shift", json={"hours": 1})
+    if st.button("⏪ -1 godzina"):
+        requests.post("http://127.0.0.1:8000/weather/time/shift", json={"hours": -1})
