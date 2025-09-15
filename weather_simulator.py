@@ -1,116 +1,74 @@
 import random
-import time
-from datetime import datetime
-
-
-def clamp(v, a, b):
-    return max(a, min(b, v))
-
-
-class WeatherState:
-    """Prosty obiekt przechowujący aktualny stan pogody."""
-
-    def __init__(self,
-                 temperature=22.0,
-                 humidity=45.0,
-                 wind_kph=5.0,
-                 precipitation_mm=0.0,
-                 cloud_pct=20.0,
-                 sunlight_lux=20000.0):
-        self.temperature = temperature
-        self.humidity = humidity
-        self.wind_kph = wind_kph
-        self.precipitation_mm = precipitation_mm
-        self.cloud_pct = cloud_pct
-        self.sunlight_lux = sunlight_lux
-        self.timestamp = datetime.now()
-
-    def to_dict(self):
-        return {
-            "timestamp": self.timestamp.isoformat(),
-            "temperature": round(self.temperature, 2),
-            "humidity": round(self.humidity, 2),
-            "wind_kph": round(self.wind_kph, 2),
-            "precipitation_mm": round(self.precipitation_mm, 2),
-            "cloud_pct": round(self.cloud_pct, 2),
-            "sunlight_lux": round(self.sunlight_lux, 2),
-        }
+from datetime import datetime, timedelta
 
 
 class WeatherSimulator:
-    """
-    Generator pogody w czasie rzeczywistym.
-    Możesz go używać do testów zamiast prawdziwych sensorów.
-    """
-
-    def __init__(self, mode="calm"):
-        self.state = WeatherState()
-        self.mode = mode
+    def __init__(self):
+        self.temperature = 20.0
+        self.humidity = 50.0
+        self.cloud_pct = 20.0
+        self.sunlight_lux = 20000
+        self.wind_kph = 5.0
+        self.precipitation_mm = 0.0
         self.manual_override = False
-        self._last_update = time.time()
+        self.current_time = datetime.now()
 
-        self.mode_factors = {
-            "calm": {"tempVar": 0.02, "cloudVar": 0.5, "rainProb": 0.01},
-            "dynamic": {"tempVar": 0.2, "cloudVar": 3, "rainProb": 0.06},
-            "storm": {"tempVar": 0.5, "cloudVar": 6, "rainProb": 0.2},
-        }
-
-    def step(self):
-        """Aktualizuje pogodę w zależności od upływu czasu."""
+    def simulate_step(self):
+        """Symulacja kroku czasu (działa tylko, jeśli nie jest w trybie ręcznym)."""
         if self.manual_override:
-            return self.state  # nie zmieniamy, gdy ręczny tryb włączony
+            return self.get_state()
 
-        now = time.time()
-        dt = now - self._last_update
-        self._last_update = now
-
-        mf = self.mode_factors.get(self.mode, self.mode_factors["calm"])
-        s = self.state
+        self.current_time += timedelta(minutes=10)
+        hour = self.current_time.hour
 
         # temperatura
-        s.temperature += (random.random() - 0.5) * mf["tempVar"] * dt * 10
+        base_temp = 15 + 10 * (1 if 10 < hour < 18 else -1)
+        self.temperature = base_temp + random.uniform(-2, 2)
 
         # wilgotność
-        s.humidity += (random.random() - 0.5) * 1.5 * mf["tempVar"] * dt * 10
-        s.humidity = clamp(s.humidity, 0, 100)
+        self.humidity = max(0, min(100, self.humidity + random.uniform(-2, 2)))
 
-        # zachmurzenie
-        s.cloud_pct += (random.random() - 0.5) * mf["cloudVar"] * dt
-        s.cloud_pct = clamp(s.cloud_pct, 0, 100)
+        # chmury
+        self.cloud_pct = max(0, min(100, self.cloud_pct + random.uniform(-5, 5)))
 
-        # słońce (zależne od godziny i chmur)
-        hour = datetime.now().hour
-        is_day = 6 <= hour <= 20
-        base_sun = 50000 if is_day else 0
-        s.sunlight_lux = max(
-            0,
-            base_sun * (1 - s.cloud_pct / 100)
-            + (random.random() - 0.5) * 2000
-        )
-
-        # wiatr
-        s.wind_kph += (random.random() - 0.5) * 1.2 * dt
-        s.wind_kph = clamp(s.wind_kph, 0, 150)
-
-        # opady
-        rain_chance = (s.cloud_pct / 100) * mf["rainProb"]
-        if random.random() < rain_chance * dt:
-            s.precipitation_mm = clamp(
-                s.precipitation_mm + random.random() * 2 * dt * 60, 0, 100
+        # światło zależne od godziny i chmur
+        if 6 <= hour <= 18:
+            self.sunlight_lux = max(
+                0, 50000 * (1 - self.cloud_pct / 100) + random.uniform(-1000, 1000)
             )
         else:
-            s.precipitation_mm = max(0, s.precipitation_mm - 0.05 * dt)
+            self.sunlight_lux = 0
 
-        s.timestamp = datetime.now()
-        return s
+        # wiatr
+        self.wind_kph = max(0, self.wind_kph + random.uniform(-1, 1))
+
+        # opady
+        if self.cloud_pct > 70:
+            self.precipitation_mm = max(0, self.precipitation_mm + random.uniform(0, 1))
+        else:
+            self.precipitation_mm = max(0, self.precipitation_mm - 0.2)
+
+        return self.get_state()
 
     def get_state(self):
-        return self.state.to_dict()
+        return {
+            "time": self.current_time.strftime("%Y-%m-%d %H:%M"),
+            "temperature": round(self.temperature, 1),
+            "humidity": round(self.humidity, 1),
+            "cloud_pct": round(self.cloud_pct, 1),
+            "sunlight_lux": round(self.sunlight_lux, 0),
+            "wind_kph": round(self.wind_kph, 1),
+            "precipitation_mm": round(self.precipitation_mm, 1),
+            "manual_override": self.manual_override,
+        }
 
-    def set_state(self, **kwargs):
-        """Ręczne nadpisanie wartości pogodowych."""
-        for k, v in kwargs.items():
-            if hasattr(self.state, k):
-                setattr(self.state, k, v)
+    def set_manual(self, **kwargs):
+        """Ustaw parametry ręcznie i włącz tryb ręczny."""
+        for key, value in kwargs.items():
+            if hasattr(self, key):
+                setattr(self, key, value)
         self.manual_override = True
-        self.state.timestamp = datetime.now()
+
+    def set_auto(self):
+        """Wyłącz tryb ręczny, włącz symulację automatyczną."""
+        self.manual_override = False

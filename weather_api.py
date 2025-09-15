@@ -1,43 +1,36 @@
-import asyncio
-import uvicorn
-from fastapi import FastAPI, Body
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from weather_simulator import WeatherSimulator
+import uvicorn
 
-app = FastAPI(title="Weather Sensor Simulator")
+app = FastAPI()
+weather = WeatherSimulator()
 
-# globalny symulator
-sim = WeatherSimulator(mode="dynamic")
+# CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @app.get("/weather")
 def get_weather():
-    """Zwraca aktualny stan pogody (ostatnia próbka)."""
-    return sim.get_state()
-
-
-@app.get("/weather/step")
-def step_weather():
-    """Wymusza krok symulacji i zwraca nowy stan."""
-    state = sim.step()
-    return state.to_dict()
+    return weather.simulate_step()
 
 
 @app.post("/weather/set")
-def set_weather(params: dict = Body(...)):
-    """Ręczne ustawienie parametrów pogodowych."""
-    sim.set_state(**params)
-    return sim.get_state()
+def set_weather(params: dict):
+    weather.set_manual(**params)
+    return {"status": "ok", "mode": "manual", "state": weather.get_state()}
 
 
-@app.on_event("startup")
-async def start_background_sim():
-    """Startuje task, który co sekundę aktualizuje pogodę (jeśli nie ręczny tryb)."""
-    async def loop():
-        while True:
-            sim.step()
-            await asyncio.sleep(1)
-    asyncio.create_task(loop())
+@app.post("/weather/auto")
+def set_auto():
+    weather.set_auto()
+    return {"status": "ok", "mode": "auto"}
 
 
 if __name__ == "__main__":
-    uvicorn.run("weather_api:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run(app, host="127.0.0.1", port=8000)
