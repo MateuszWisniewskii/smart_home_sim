@@ -3,7 +3,9 @@
 - download python
 - create virtual environment
 - install dependencies 
-## how to run
-- ``` python weather_api.py
-- ``` streamlit run ui.py
+## How to run
+```bash
+python weather_api.py
+streamlit run ui.py
+
 
