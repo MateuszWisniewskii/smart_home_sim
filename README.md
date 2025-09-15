@@ -6,6 +6,10 @@
 ## How to run
 ```bash
 python weather_api.py
-streamlit run ui.py
-
-
+```
+```bash
+streamlit run ui_display.py
+```
+```bash
+streamlit run ui_control.py
+```
