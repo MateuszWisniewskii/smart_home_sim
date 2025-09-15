@@ -170,3 +170,50 @@ if weather:
             st.write("🚪 Drzwi:", "🔒 Zamknięte" if st.session_state[key_door] else "🔓 Otwarte")
             if st.button("Przełącz drzwi", key=f"btn_door_{i}"):
                 st.session_state[key_door] = not st.session_state[key_door]
+
+# ---------------- BLINDS (ROLETS) ----------------
+st.header("🪟 Rolety zewnętrzne")
+
+if weather:
+    if "blinds" not in st.session_state:
+        # przechowujemy stan rolet dla każdego pokoju (0-100%)
+        st.session_state.blinds = {room: 0 for room in rooms}  
+
+    for room in rooms:
+        col1, col2 = st.columns([2, 1])
+        with col1:
+            st.write(f"**{room}**")
+
+            # automatyczna logika
+            wind = weather["wind_kph"]
+            sun = weather["sunlight_lux"]
+            temp = weather["temperature"]
+
+            auto_level = None
+            if wind > 40:  
+                auto_level = 100   # zamykamy całkowicie
+            elif temp < 10 and sun > 15000:  
+                auto_level = 0     # otwieramy na maxa
+            elif temp > 25 and sun > 20000:  
+                auto_level = 70    # przysłaniamy częściowo
+
+            if auto_level is not None:
+                st.session_state.blinds[room] = auto_level
+                st.write("🤖 Tryb automatyczny:", auto_level, "%")
+
+            # manual slider
+            st.session_state.blinds[room] = st.slider(
+                f"Ustaw rolety ({room})", 
+                0, 100, st.session_state.blinds[room],
+                step=10, key=f"blind_{room}"
+            )
+
+        with col2:
+            level = st.session_state.blinds[room]
+            st.metric("Poziom rolet", f"{level}%")
+            if level == 0:
+                st.write("🌞 Otwarte")
+            elif level == 100:
+                st.write("🌑 Zamknięte")
+            else:
+                st.write("🌗 Częściowo przysłonięte")
