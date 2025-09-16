@@ -2,9 +2,11 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from weather_simulator import WeatherSimulator
 import uvicorn
+from smart_home_systems import SmartHomeSystems
 
 app = FastAPI()
 weather = WeatherSimulator()
+smart_home = SmartHomeSystems()
 
 # CORS
 app.add_middleware(
@@ -17,24 +19,13 @@ app.add_middleware(
 
 @app.get("/weather")
 def get_weather():
-    return weather.simulate_step()
+    return weather.get_state()
 
 
 @app.post("/weather/set")
 def set_weather(params: dict):
-    weather.set_manual(**params)
-    return {"status": "ok", "mode": "manual", "state": weather.get_state()}
-
-
-@app.post("/weather/auto")
-def set_auto():
-    weather.set_auto()
-    return {"status": "ok", "mode": "auto"}
-
-
-if __name__ == "__main__":
-    uvicorn.run(app, host="127.0.0.1", port=8000)
-
+    weather.set_weather(**params)
+    return {"status": "ok", "state": weather.get_state()}
 
 @app.post("/weather/time/set")
 def set_time(params: dict):
@@ -49,3 +40,39 @@ def shift_time(params: dict):
     minutes = params.get("minutes", 0)
     weather.shift_time(hours=hours, minutes=minutes)
     return {"status": "ok", "time": weather.get_state()["time"]}
+
+@app.get("/smart_home")
+def get_smart_home_state():
+    return smart_home.get_state()
+
+@app.post("/smart_home/blinds/set")
+def set_blind(params: dict):
+    room = params.get("room")
+    position = params.get("position")  # "open" lub "closed"
+    success = smart_home.set_blind(room, position)
+    return {"status": "ok" if success else "error", "blinds": smart_home.get_state()["blinds"]}
+
+@app.post("/smart_home/blinds/toggle")
+def toggle_blind(params: dict):
+    room = params.get("room")
+    success = smart_home.toggle_blind(room)
+    return {"status": "ok" if success else "error", "blinds": smart_home.get_state()["blinds"]}
+
+@app.post("/smart_home/blinds/set")
+def set_blind(params: dict):
+    room = params.get("room")
+    position = params.get("position")  # liczba 0-100
+    success = smart_home.set_blind(room, position)
+    return {"status": "ok" if success else "error", "blinds": smart_home.get_state()["blinds"]}
+
+@app.post("/smart_home/blinds/adjust")
+def adjust_blind(params: dict):
+    room = params.get("room")
+    delta = params.get("delta", 0)  # liczba dodatnia lub ujemna
+    success = smart_home.adjust_blind(room, delta)
+    return {"status": "ok" if success else "error", "blinds": smart_home.get_state()["blinds"]}
+
+
+if __name__ == "__main__":
+    uvicorn.run(app, host="127.0.0.1", port=8000)
+

@@ -5,6 +5,9 @@
 - install dependencies 
 ## How to run
 ```bash
+.\venv\Scripts\activate.bat
+```
+```bash
 python weather_api.py
 ```
 ```bash
