@@ -20,7 +20,12 @@ app.add_middleware(
 @app.get("/weather")
 def get_weather():
     state = weather.get_state()
-    smart_home.update_wind(state["wind_kph"])  # informujemy smart_home o aktualnym wietrze
+    # zamiast update_wind -> update_weather
+    smart_home.update_weather(
+        temperature=state["temperature"],
+        sunlight_lux=state["sunlight_lux"],
+        wind_kph=state["wind_kph"]
+    )
     return state
 
 
