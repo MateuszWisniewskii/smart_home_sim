@@ -34,30 +34,40 @@ if weather:
 
 st.header("🪟 Sterowanie roletami (0-100%)")
 
-rooms = ["living_room", "bedroom", "kitchen"]
+rooms = ["living_room", "bedroom", "kitchen"]  
 
 for room in rooms:
     st.subheader(room.replace("_", " ").title())
 
-    # pobieramy aktualny stan rolet z API
     try:
         state = requests.get(f"{API_URL}/smart_home", timeout=2).json()
         current_position = state["blinds"].get(room, 0)
+        blocked = state.get("wind_limit_active", False)
     except:
         current_position = 0
+        blocked = False
 
-    # suwak do ustawienia dokładnej pozycji
-    position = st.slider("Pozycja [%]", 0, 100, current_position, key=f"{room}_slider")
-    if st.button(f"📌 Ustaw {room}", key=f"{room}_set"):
-        requests.post(f"{API_URL}/smart_home/blinds/set", json={"room": room, "position": position})
+    if blocked:
+        st.warning("⚠️ Rolety zablokowane przy wietrze > 80 km/h")
+        st.slider("Pozycja [%]", 0, 100, current_position, key=f"{room}_slider", disabled=True)
+        st.button("📌 Ustaw", key=f"{room}_set", disabled=True)
+        col1, col2 = st.columns(2)
+        with col1:
+            st.button("⬆ +10%", key=f"{room}_up", disabled=True)
+        with col2:
+            st.button("⬇ -10%", key=f"{room}_down", disabled=True)
+    else:
+        # normalne sterowanie suwakiem i przyciskami
+        position = st.slider("Pozycja [%]", 0, 100, current_position, key=f"{room}_slider")
+        if st.button(f"📌 Ustaw {room}", key=f"{room}_set"):
+            requests.post(f"{API_URL}/smart_home/blinds/set", json={"room": room, "position": position})
 
-    # przyciski do drobnej regulacji
-    col1, col2 = st.columns(2)
-    with col1:
-        if st.button("⬆ +10%", key=f"{room}_up"):
-            requests.post(f"{API_URL}/smart_home/blinds/adjust", json={"room": room, "delta": 10})
-    with col2:
-        if st.button("⬇ -10%", key=f"{room}_down"):
-            requests.post(f"{API_URL}/smart_home/blinds/adjust", json={"room": room, "delta": -10})
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("⬆ +10%", key=f"{room}_up"):
+                requests.post(f"{API_URL}/smart_home/blinds/adjust", json={"room": room, "delta": 10})
+        with col2:
+            if st.button("⬇ -10%", key=f"{room}_down"):
+                requests.post(f"{API_URL}/smart_home/blinds/adjust", json={"room": room, "delta": -10})
 
     st.write(f"Aktualna pozycja: {current_position}%")

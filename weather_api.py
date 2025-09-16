@@ -19,7 +19,9 @@ app.add_middleware(
 
 @app.get("/weather")
 def get_weather():
-    return weather.get_state()
+    state = weather.get_state()
+    smart_home.update_wind(state["wind_kph"])  # informujemy smart_home o aktualnym wietrze
+    return state
 
 
 @app.post("/weather/set")
@@ -50,12 +52,6 @@ def set_blind(params: dict):
     room = params.get("room")
     position = params.get("position")  # "open" lub "closed"
     success = smart_home.set_blind(room, position)
-    return {"status": "ok" if success else "error", "blinds": smart_home.get_state()["blinds"]}
-
-@app.post("/smart_home/blinds/toggle")
-def toggle_blind(params: dict):
-    room = params.get("room")
-    success = smart_home.toggle_blind(room)
     return {"status": "ok" if success else "error", "blinds": smart_home.get_state()["blinds"]}
 
 @app.post("/smart_home/blinds/set")
