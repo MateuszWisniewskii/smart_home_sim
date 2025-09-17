@@ -15,6 +15,22 @@ tab1, tab2 = st.tabs(["📊 Panel", "⚙️ Ustawienia progów"])
 
 rooms = ["living_room", "bedroom", "kitchen"]
 
+st.sidebar.header("⚙️ Ustawienia globalne")
+try:
+    state = requests.get(f"{API_URL}/smart_home", timeout=2).json()
+    manual_override = state.get("manual_override", False)
+except:
+    manual_override = False
+
+manual_state = st.sidebar.toggle("🔒 Tryb manualny (wyłącza automatykę)", value=manual_override)
+
+if manual_state != manual_override:
+    requests.post(f"{API_URL}/smart_home/manual_override/set", json={"state": manual_state})
+
+if manual_state:
+    st.sidebar.warning("Automatyka wyłączona – sterowanie tylko ręczne.")
+
+
 # ---------------- TAB 1: PANEL ----------------
 with tab1:
     # ---------------- WEATHER STATE ----------------

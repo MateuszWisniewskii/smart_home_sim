@@ -101,5 +101,21 @@ def set_thresholds(params: dict):
     updated = smart_home.set_thresholds(params)
     return {"status": "ok", "thresholds": updated}
 
+# ------------------ MANUAL ----------------------
+@app.post("/smart_home/manual_override/set")
+def set_manual_override(params: dict):
+    state = params.get("state", False)
+    new_state = smart_home.set_manual_override(state)
+    return {"status": "ok", "manual_override": new_state}
+
+@app.post("/smart_home/manual_override/toggle")
+def toggle_manual_override():
+    new_state = smart_home.toggle_manual_override()
+    return {"status": "ok", "manual_override": new_state}
+
+    
 if __name__ == "__main__":
     uvicorn.run(app, host="127.0.0.1", port=8000)
+
+
+
