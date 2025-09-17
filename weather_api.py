@@ -55,13 +55,6 @@ def get_smart_home_state():
 @app.post("/smart_home/blinds/set")
 def set_blind(params: dict):
     room = params.get("room")
-    position = params.get("position")  # "open" lub "closed"
-    success = smart_home.set_blind(room, position)
-    return {"status": "ok" if success else "error", "blinds": smart_home.get_state()["blinds"]}
-
-@app.post("/smart_home/blinds/set")
-def set_blind(params: dict):
-    room = params.get("room")
     position = params.get("position")  # liczba 0-100
     success = smart_home.set_blind(room, position)
     return {"status": "ok" if success else "error", "blinds": smart_home.get_state()["blinds"]}
@@ -73,6 +66,22 @@ def adjust_blind(params: dict):
     success = smart_home.adjust_blind(room, delta)
     return {"status": "ok" if success else "error", "blinds": smart_home.get_state()["blinds"]}
 
+# ---------------------- LIGHTS ----------------------
+@app.post("/smart_home/lights/set")
+def set_light(params: dict):
+    room = params.get("room")
+    brightness = params.get("brightness", 0)
+    success = smart_home.set_light(room, brightness)
+    return {"status": "ok" if success else "error", "lights": smart_home.get_state()["lights"]}
+
+
+@app.post("/smart_home/lights/adjust")
+def adjust_light(params: dict):
+    room = params.get("room")
+    delta = params.get("delta", 0)  # liczba dodatnia lub ujemna
+    # zakładam że w SmartHomeSystems masz metodę adjust_light(room, delta)
+    success = smart_home.adjust_light(room, delta)
+    return {"status": "ok" if success else "error", "lights": smart_home.get_state()["lights"]}
 
 if __name__ == "__main__":
     uvicorn.run(app, host="127.0.0.1", port=8000)

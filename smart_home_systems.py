@@ -9,6 +9,11 @@ class SmartHomeSystems:
     HOT_SUN_LUX_THRESHOLD = 30000  # lux – powyżej jest bardzo słonecznie
     HOT_MIN_POSITION = 70          # minimalne opuszczenie rolety w gorąco-słonecznie
 
+    LIGHT_BRIGHT_THRESHOLD = 30000 # lux – powyżej jest bardzo jasno
+    LIGHT_MAX = 30                 # max jasność, gdy jasno
+    LIGHT_DARK_THRESHOLD = 5000    # lux – poniżej jest ciemno
+    LIGHT_MIN = 70                 # min jasność, gdy ciemno
+
     def __init__(self):
         # rolety w procentach: 0 = zamknięta, 100 = otwarta
         self.blinds = {
@@ -18,6 +23,8 @@ class SmartHomeSystems:
         }
         # lamele w procentach: 0 = zamknięte, 100 = całkowicie otwarte
         self.slats = {room: 50 for room in self.blinds}
+        # światła w procentach: 0 = zgaszone, 100 = pełna jasność
+        self.lights = {room: 0 for room in self.blinds}
         # aktualny stan pogody
         self.current_wind = 0
         self.current_temp = 20
@@ -33,8 +40,8 @@ class SmartHomeSystems:
         # 1️⃣ Blokada wiatrowa – rolety max 30%
         if self.current_wind >= self.WIND_LIMIT:
             for room in self.blinds:
-                if self.blinds[room] > 30:
-                    self.blinds[room] = 30
+                if self.blinds[room] > 0:
+                    self.blinds[room] = 0
 
         # 2️⃣ Zimno i słonecznie – rolety max 30%
         elif self.current_temp < self.COLD_TEMP_THRESHOLD and self.current_sunlight > self.SUN_LUX_THRESHOLD:
@@ -47,6 +54,11 @@ class SmartHomeSystems:
             for room in self.blinds:
                 if self.blinds[room] < self.HOT_MIN_POSITION:
                     self.blinds[room] = self.HOT_MIN_POSITION
+
+            # 🌞 Bardzo jasno → światła gaśnie do 0%
+        elif self.current_sunlight > self.LIGHT_BRIGHT_THRESHOLD:
+            for room in self.lights:
+                self.lights[room] = 0
 
     # ---------------------- Rolety góra-dół ----------------------
     def set_blind(self, room: str, position: int):
@@ -87,6 +99,37 @@ class SmartHomeSystems:
             return True
         return False
 
+# ----------------------------------------------- Światła --------------------------------------------------------
+    def set_light(self, room: str, brightness: int):
+        """Ustawienie jasności światła w 0-100%."""
+        if room in self.lights and 0 <= brightness <= 100:
+            # Bardzo jasno → światła gasną
+            if self.current_sunlight > self.LIGHT_BRIGHT_THRESHOLD:
+                brightness = 0
+            # Bardzo ciemno → min 70%
+            elif self.current_sunlight < self.LIGHT_DARK_THRESHOLD:
+                brightness = max(brightness, self.LIGHT_MIN)
+
+            self.lights[room] = brightness
+            return True
+        return False
+
+    def adjust_light(self, room: str, delta: int):
+        """Zmiana jasności światła o delta procentów (+/-)."""
+        if room in self.lights:
+            new_brightness = self.lights[room] + delta
+
+            # Bardzo jasno → światła gasną
+            if self.current_sunlight > self.LIGHT_BRIGHT_THRESHOLD:
+                new_brightness = 0
+            # Bardzo ciemno → min 70%
+            elif self.current_sunlight < self.LIGHT_DARK_THRESHOLD:
+                new_brightness = max(new_brightness, self.LIGHT_MIN)
+
+            self.lights[room] = max(0, min(100, new_brightness))
+            return True
+        return False
+    
     # ---------------------- Lamele ----------------------
     def set_slats(self, room: str, angle: int):
         """Ustawienie kąta lameli 0-100%."""
@@ -109,12 +152,15 @@ class SmartHomeSystems:
 
     # ---------------------- Pobranie stanu ----------------------
     def get_state(self):
+        light_limit_active = self.current_sunlight > self.LIGHT_BRIGHT_THRESHOLD
         return {
             "blinds": self.blinds.copy(),
             "slats": self.slats.copy(),
+            "lights": self.lights.copy(),
             "wind_limit_active": self.current_wind >= self.WIND_LIMIT,
             "cold_sunny_limit_active": self.current_temp < self.COLD_TEMP_THRESHOLD
-                                         and self.current_sunlight > self.SUN_LUX_THRESHOLD,
+                                        and self.current_sunlight > self.SUN_LUX_THRESHOLD,
             "hot_sunny_limit_active": self.current_temp > self.HOT_TEMP_THRESHOLD
-                                         and self.current_sunlight > self.HOT_SUN_LUX_THRESHOLD
+                                        and self.current_sunlight > self.HOT_SUN_LUX_THRESHOLD,
+            "light_limit_active": light_limit_active
         }

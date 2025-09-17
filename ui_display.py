@@ -31,7 +31,7 @@ if weather:
     col4.metric("☁️ Zachmurzenie [%]", weather["cloud_pct"])
     col5.metric("🌞 Światło [lux]", weather["sunlight_lux"])
     col6.metric("🌧 Opady [mm]", weather["precipitation_mm"])
-
+# ---------------- BLINDS ----------------
 st.header("🪟 Sterowanie roletami (0-100%)")
 
 rooms = ["living_room", "bedroom", "kitchen"]  
@@ -71,3 +71,42 @@ for room in rooms:
                 requests.post(f"{API_URL}/smart_home/blinds/adjust", json={"room": room, "delta": -10})
 
     st.write(f"Aktualna pozycja: {current_position}%")
+
+# ---------------- LIGHTS ----------------
+st.header("💡 Sterowanie światłami (0-100%)")
+
+for room in rooms:
+    st.subheader(room.replace("_", " ").title())
+
+    try:
+        state = requests.get(f"{API_URL}/smart_home", timeout=2).json()
+        current_brightness = state["lights"].get(room, 0)
+        light_blocked = state.get("light_limit_active", False)
+    except:
+        current_brightness = 0
+        light_blocked = False
+
+    if light_blocked:
+        st.warning("⚠️ Jasność ograniczona przy dużym nasłonecznieniu")
+        st.slider("Jasność [%]", 0, 100, current_brightness, key=f"{room}_light_slider", disabled=True)
+        st.button(f"💡 Ustaw {room}", key=f"{room}_light_set", disabled=True)
+        col1, col2 = st.columns(2)
+        with col1:
+            st.button("⬆ +10%", key=f"{room}_light_up", disabled=True)
+        with col2:
+            st.button("⬇ -10%", key=f"{room}_light_down", disabled=True)
+    else:
+        brightness = st.slider("Jasność [%]", 0, 100, current_brightness, key=f"{room}_light_slider")
+        #print(f"{room}:{brightness}")
+        if st.button(f"💡 Ustaw {room}", key=f"{room}_light_set"):
+            requests.post(f"{API_URL}/smart_home/lights/set", json={"room": room, "brightness": brightness})
+
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("⬆ +10%", key=f"{room}_light_up"):
+                requests.post(f"{API_URL}/smart_home/lights/adjust", json={"room": room, "delta": 10})
+        with col2:
+            if st.button("⬇ -10%", key=f"{room}_light_down"):
+                requests.post(f"{API_URL}/smart_home/lights/adjust", json={"room": room, "delta": -10})
+
+        st.write(f"Aktualna jasność: {current_brightness}%")
