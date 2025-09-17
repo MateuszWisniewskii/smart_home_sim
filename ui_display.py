@@ -110,3 +110,32 @@ for room in rooms:
                 requests.post(f"{API_URL}/smart_home/lights/adjust", json={"room": room, "delta": -10})
 
         st.write(f"Aktualna jasność: {current_brightness}%")
+
+# ---------------- AIRCON ----------------
+st.header("💨 Sterowanie klimatyzacją (0-100%)")
+
+for room in rooms:
+    st.subheader(room.replace("_", " ").title())
+
+    try:
+        state = requests.get(f"{API_URL}/smart_home", timeout=2).json()
+        current_temperature = state["temperature"].get(room, 0)
+        #light_blocked = state.get("light_limit_active", False)
+    except:
+        current_brightness = 0
+        light_blocked = False
+
+    brightness = st.slider("Moc klimatyzacji [%]", 0, 100, current_brightness, key=f"{room}_ac_slider")
+        #print(f"{room}:{brightness}")
+    if st.button(f"💨 Ustaw {room}", key=f"{room}_ac_set"):
+            requests.post(f"{API_URL}/smart_home/ac/set", json={"room": room, "ac_power": ac_power})
+
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("⬆ +10%", key=f"{room}_ac_up"):
+            requests.post(f"{API_URL}/smart_home/ac/adjust", json={"room": room, "delta": 10})
+    with col2:
+        if st.button("⬇ -10%", key=f"{room}_ac_down"):
+            requests.post(f"{API_URL}/smart_home/ac/adjust", json={"room": room, "delta": -10})
+
+        st.write(f"Aktualna jasność: {current_brightness}%")

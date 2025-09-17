@@ -6,6 +6,7 @@ class SmartHomeSystems:
     MAX_SUN_HEAT_POSITION = 30     # maksymalne opuszczenie rolety w zimno-słonecznie
 
     HOT_TEMP_THRESHOLD = 28        # °C – powyżej tej temp. jest gorąco
+    FREEZING_TEMP_THRESHOLD = 18 
     HOT_SUN_LUX_THRESHOLD = 30000  # lux – powyżej jest bardzo słonecznie
     HOT_MIN_POSITION = 70          # minimalne opuszczenie rolety w gorąco-słonecznie
 
@@ -25,6 +26,8 @@ class SmartHomeSystems:
         self.slats = {room: 50 for room in self.blinds}
         # światła w procentach: 0 = zgaszone, 100 = pełna jasność
         self.lights = {room: 0 for room in self.blinds}
+        # temperatura
+        self.temperature = {room: 0 for room in self.blinds}
         # aktualny stan pogody
         self.current_wind = 0
         self.current_temp = 20
@@ -115,6 +118,37 @@ class SmartHomeSystems:
         return False
 
     def adjust_light(self, room: str, delta: int):
+        """Zmiana jasności światła o delta procentów (+/-)."""
+        if room in self.lights:
+            new_brightness = self.lights[room] + delta
+
+            # Bardzo jasno → światła gasną
+            if self.current_sunlight > self.LIGHT_BRIGHT_THRESHOLD:
+                new_brightness = 0
+            # Bardzo ciemno → min 70%
+            elif self.current_sunlight < self.LIGHT_DARK_THRESHOLD:
+                new_brightness = max(new_brightness, self.LIGHT_MIN)
+
+            self.lights[room] = max(0, min(100, new_brightness))
+            return True
+        return False
+    
+    # ----------------------------------------------- Klimatyzacja --------------------------------------------------------
+    def set_aircon(self, room: str, temperature: int):
+        """Ustawienie jasności światła w 0-100%."""
+        if room in self.lights and 0 <= temperature <= 100:
+            # Bardzo jasno → światła gasną
+            if self.current_sunlight > self.LIGHT_BRIGHT_THRESHOLD:
+                temperature = 0
+            # Bardzo ciemno → min 70%
+            elif self.current_sunlight < self.LIGHT_DARK_THRESHOLD:
+                temperature = max(temperature, self.LIGHT_MIN)
+
+            self.temperature[room] = temperature
+            return True
+        return False
+
+    def adjust_aircon(self, room: str, delta: int):
         """Zmiana jasności światła o delta procentów (+/-)."""
         if room in self.lights:
             new_brightness = self.lights[room] + delta

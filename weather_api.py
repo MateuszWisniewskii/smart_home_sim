@@ -83,6 +83,23 @@ def adjust_light(params: dict):
     success = smart_home.adjust_light(room, delta)
     return {"status": "ok" if success else "error", "lights": smart_home.get_state()["lights"]}
 
+# ---------------------- Air conditioning ----------------------
+@app.post("/smart_home/ac/set")
+def set_ac(params: dict):
+    room = params.get("room")
+    brightness = params.get("brightness", 0)
+    success = smart_home.set_ac(room, ac_power)
+    return {"status": "ok" if success else "error", "lights": smart_home.get_state()["lights"]}
+
+
+@app.post("/smart_home/ac/adjust")
+def adjust_ac(params: dict):
+    room = params.get("room")
+    delta = params.get("delta", 0)  # liczba dodatnia lub ujemna
+    # zakładam że w SmartHomeSystems masz metodę adjust_light(room, delta)
+    success = smart_home.adjust_ac(room, delta)
+    return {"status": "ok" if success else "error", "ac": smart_home.get_state()["lights"]}
+
 if __name__ == "__main__":
     uvicorn.run(app, host="127.0.0.1", port=8000)
 
