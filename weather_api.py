@@ -113,7 +113,24 @@ def toggle_manual_override():
     new_state = smart_home.toggle_manual_override()
     return {"status": "ok", "manual_override": new_state}
 
-    
+# ------------------ ROOMS ----------------------
+@app.get("/smart_home/rooms")
+def get_rooms():
+    return {"rooms": smart_home.get_rooms()}
+
+@app.post("/smart_home/rooms/add")
+def add_room(params: dict):
+    room = params.get("room")
+    updated = smart_home.add_room(room)
+    return {"status": "ok", "rooms": updated}
+
+@app.post("/smart_home/rooms/remove")
+def remove_room(params: dict):
+    room = params.get("room")
+    updated = smart_home.remove_room(room)
+    return {"status": "ok", "rooms": updated}
+
+
 if __name__ == "__main__":
     uvicorn.run(app, host="127.0.0.1", port=8000)
 
