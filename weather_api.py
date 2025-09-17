@@ -16,18 +16,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
 @app.get("/weather")
 def get_weather():
     state = weather.get_state()
-    # zamiast update_wind -> update_weather
     smart_home.update_weather(
         temperature=state["temperature"],
         sunlight_lux=state["sunlight_lux"],
         wind_kph=state["wind_kph"]
     )
     return state
-
 
 @app.post("/weather/set")
 def set_weather(params: dict):
@@ -48,6 +45,7 @@ def shift_time(params: dict):
     weather.shift_time(hours=hours, minutes=minutes)
     return {"status": "ok", "time": weather.get_state()["time"]}
 
+# ---------------------- SMART HOME ----------------------
 @app.get("/smart_home")
 def get_smart_home_state():
     return smart_home.get_state()
@@ -55,18 +53,17 @@ def get_smart_home_state():
 @app.post("/smart_home/blinds/set")
 def set_blind(params: dict):
     room = params.get("room")
-    position = params.get("position")  # liczba 0-100
+    position = params.get("position")
     success = smart_home.set_blind(room, position)
     return {"status": "ok" if success else "error", "blinds": smart_home.get_state()["blinds"]}
 
 @app.post("/smart_home/blinds/adjust")
 def adjust_blind(params: dict):
     room = params.get("room")
-    delta = params.get("delta", 0)  # liczba dodatnia lub ujemna
+    delta = params.get("delta", 0)
     success = smart_home.adjust_blind(room, delta)
     return {"status": "ok" if success else "error", "blinds": smart_home.get_state()["blinds"]}
 
-# ---------------------- LIGHTS ----------------------
 @app.post("/smart_home/lights/set")
 def set_light(params: dict):
     room = params.get("room")
@@ -74,16 +71,13 @@ def set_light(params: dict):
     success = smart_home.set_light(room, brightness)
     return {"status": "ok" if success else "error", "lights": smart_home.get_state()["lights"]}
 
-
 @app.post("/smart_home/lights/adjust")
 def adjust_light(params: dict):
     room = params.get("room")
-    delta = params.get("delta", 0)  # liczba dodatnia lub ujemna
-    # zakładam że w SmartHomeSystems masz metodę adjust_light(room, delta)
+    delta = params.get("delta", 0)
     success = smart_home.adjust_light(room, delta)
     return {"status": "ok" if success else "error", "lights": smart_home.get_state()["lights"]}
 
-# ---------------------- AIR CONDITIONING ----------------------
 @app.post("/smart_home/ac/set")
 def set_ac(params: dict):
     room = params.get("room")
@@ -97,7 +91,15 @@ def toggle_ac(params: dict):
     success = smart_home.toggle_ac(room)
     return {"status": "ok" if success else "error", "ac": smart_home.get_state()["ac"]}
 
+# ---------------------- THRESHOLDS ----------------------
+@app.get("/smart_home/thresholds")
+def get_thresholds():
+    return smart_home.get_thresholds()
+
+@app.post("/smart_home/thresholds/set")
+def set_thresholds(params: dict):
+    updated = smart_home.set_thresholds(params)
+    return {"status": "ok", "thresholds": updated}
 
 if __name__ == "__main__":
     uvicorn.run(app, host="127.0.0.1", port=8000)
-

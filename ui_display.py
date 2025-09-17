@@ -11,123 +11,123 @@ st_autorefresh(interval=5000, key="refresh")
 
 st.title("🏠 Smart Home Dashboard")
 
-# ---------------- WEATHER STATE ----------------
-st.header("🌦 Aktualna pogoda")
-try:
-    weather = requests.get(f"{API_URL}/weather", timeout=2).json()
-    st.success("Dane pobrane z API ✅")
-except Exception as e:
-    st.error(f"Błąd w pobieraniu pogody: {e}")
-    weather = None
+tab1, tab2 = st.tabs(["📊 Panel", "⚙️ Ustawienia progów"])
 
-if weather:
-    st.subheader(f"🕒 Czas symulacji: {weather['time']}")
-    col1, col2, col3 = st.columns(3)
-    col1.metric("🌡 Temperatura [°C]", weather["temperature"])
-    col2.metric("💧 Wilgotność [%]", weather["humidity"])
-    col3.metric("💨 Wiatr [km/h]", weather["wind_kph"])
+rooms = ["living_room", "bedroom", "kitchen"]
 
-    col4, col5, col6 = st.columns(3)
-    col4.metric("☁️ Zachmurzenie [%]", weather["cloud_pct"])
-    col5.metric("🌞 Światło [lux]", weather["sunlight_lux"])
-    col6.metric("🌧 Opady [mm]", weather["precipitation_mm"])
-# ---------------- BLINDS ----------------
-st.header("🪟 Sterowanie roletami (0-100%)")
-
-rooms = ["living_room", "bedroom", "kitchen"]  
-
-for room in rooms:
-    st.subheader(room.replace("_", " ").title())
-
+# ---------------- TAB 1: PANEL ----------------
+with tab1:
+    # ---------------- WEATHER STATE ----------------
+    st.header("🌦 Aktualna pogoda")
     try:
-        state = requests.get(f"{API_URL}/smart_home", timeout=2).json()
-        current_position = state["blinds"].get(room, 0)
-        blocked = state.get("wind_limit_active", False)
-    except:
-        current_position = 0
-        blocked = False
+        weather = requests.get(f"{API_URL}/weather", timeout=2).json()
+        st.success("Dane pobrane z API ✅")
+    except Exception as e:
+        st.error(f"Błąd w pobieraniu pogody: {e}")
+        weather = None
 
-    if blocked:
-        st.warning("⚠️ Rolety zablokowane przy wietrze > 80 km/h")
-        st.slider("Pozycja [%]", 0, 100, current_position, key=f"{room}_slider", disabled=True)
-        st.button("📌 Ustaw", key=f"{room}_set", disabled=True)
-        col1, col2 = st.columns(2)
-        with col1:
-            st.button("⬆ +10%", key=f"{room}_up", disabled=True)
-        with col2:
-            st.button("⬇ -10%", key=f"{room}_down", disabled=True)
-    else:
-        # normalne sterowanie suwakiem i przyciskami
-        position = st.slider("Pozycja [%]", 0, 100, current_position, key=f"{room}_slider")
-        if st.button(f"📌 Ustaw {room}", key=f"{room}_set"):
-            requests.post(f"{API_URL}/smart_home/blinds/set", json={"room": room, "position": position})
+    if weather:
+        st.subheader(f"🕒 Czas symulacji: {weather['time']}")
+        col1, col2, col3 = st.columns(3)
+        col1.metric("🌡 Temperatura [°C]", weather["temperature"])
+        col2.metric("💧 Wilgotność [%]", weather["humidity"])
+        col3.metric("💨 Wiatr [km/h]", weather["wind_kph"])
 
-        col1, col2 = st.columns(2)
-        with col1:
-            if st.button("⬆ +10%", key=f"{room}_up"):
-                requests.post(f"{API_URL}/smart_home/blinds/adjust", json={"room": room, "delta": 10})
-        with col2:
-            if st.button("⬇ -10%", key=f"{room}_down"):
-                requests.post(f"{API_URL}/smart_home/blinds/adjust", json={"room": room, "delta": -10})
+        col4, col5, col6 = st.columns(3)
+        col4.metric("☁️ Zachmurzenie [%]", weather["cloud_pct"])
+        col5.metric("🌞 Światło [lux]", weather["sunlight_lux"])
+        col6.metric("🌧 Opady [mm]", weather["precipitation_mm"])
 
-    st.write(f"Aktualna pozycja: {current_position}%")
+    # ---------------- BLINDS ----------------
+    st.header("🪟 Sterowanie roletami")
+    for room in rooms:
+        st.subheader(room.replace("_", " ").title())
+        try:
+            state = requests.get(f"{API_URL}/smart_home", timeout=2).json()
+            current_position = state["blinds"].get(room, 0)
+            blocked = state.get("wind_limit_active", False)
+        except:
+            current_position = 0
+            blocked = False
 
-# ---------------- LIGHTS ----------------
-st.header("💡 Sterowanie światłami (0-100%)")
+        if blocked:
+            st.warning("⚠️ Rolety zablokowane przy wietrze")
+            st.slider("Pozycja [%]", 0, 100, current_position, key=f"{room}_slider", disabled=True)
+        else:
+            position = st.slider("Pozycja [%]", 0, 100, current_position, key=f"{room}_slider")
+            if st.button(f"📌 Ustaw {room}", key=f"{room}_set"):
+                requests.post(f"{API_URL}/smart_home/blinds/set", json={"room": room, "position": position})
 
-for room in rooms:
-    st.subheader(room.replace("_", " ").title())
+    # ---------------- LIGHTS ----------------
+    st.header("💡 Sterowanie światłami")
+    for room in rooms:
+        st.subheader(room.replace("_", " ").title())
+        try:
+            state = requests.get(f"{API_URL}/smart_home", timeout=2).json()
+            current_brightness = state["lights"].get(room, 0)
+            light_blocked = state.get("light_limit_active", False)
+        except:
+            current_brightness = 0
+            light_blocked = False
 
+        if light_blocked:
+            st.warning("⚠️ Jasność ograniczona przy dużym nasłonecznieniu")
+            st.slider("Jasność [%]", 0, 100, current_brightness, key=f"{room}_light_slider", disabled=True)
+        else:
+            brightness = st.slider("Jasność [%]", 0, 100, current_brightness, key=f"{room}_light_slider")
+            if st.button(f"💡 Ustaw {room}", key=f"{room}_light_set"):
+                requests.post(f"{API_URL}/smart_home/lights/set", json={"room": room, "brightness": brightness})
+
+    # ---------------- AIR CONDITIONING ----------------
+    st.header("❄️ Sterowanie klimatyzacją")
+    for room in rooms:
+        st.subheader(room.replace("_", " ").title())
+        try:
+            state = requests.get(f"{API_URL}/smart_home", timeout=2).json()
+            ac_on = state["ac"].get(room, False)
+            ac_auto = state.get("ac_auto_active", False)
+        except:
+            ac_on = False
+            ac_auto = False
+
+        if ac_auto:
+            st.info("ℹ️ Klimatyzacja automatycznie włączona (możesz ją wyłączyć).")
+
+        ac_state = st.toggle("Klimatyzacja", value=ac_on, key=f"{room}_ac")
+        if st.button(f"📌 Zmień AC {room}", key=f"{room}_ac_set"):
+            requests.post(f"{API_URL}/smart_home/ac/set", json={"room": room, "state": ac_state})
+
+# ---------------- TAB 2: THRESHOLDS ----------------
+with tab2:
+    st.header("⚙️ Konfiguracja progów automatyki")
     try:
-        state = requests.get(f"{API_URL}/smart_home", timeout=2).json()
-        current_brightness = state["lights"].get(room, 0)
-        light_blocked = state.get("light_limit_active", False)
-    except:
-        current_brightness = 0
-        light_blocked = False
+        thresholds = requests.get(f"{API_URL}/smart_home/thresholds", timeout=2).json()
+    except Exception as e:
+        st.error(f"Błąd w pobieraniu progów: {e}")
+        thresholds = {}
 
-    if light_blocked:
-        st.warning("⚠️ Jasność ograniczona przy dużym nasłonecznieniu")
-        st.slider("Jasność [%]", 0, 100, current_brightness, key=f"{room}_light_slider", disabled=True)
-        st.button(f"💡 Ustaw {room}", key=f"{room}_light_set", disabled=True)
-        col1, col2 = st.columns(2)
-        with col1:
-            st.button("⬆ +10%", key=f"{room}_light_up", disabled=True)
-        with col2:
-            st.button("⬇ -10%", key=f"{room}_light_down", disabled=True)
-    else:
-        brightness = st.slider("Jasność [%]", 0, 100, current_brightness, key=f"{room}_light_slider")
-        #print(f"{room}:{brightness}")
-        if st.button(f"💡 Ustaw {room}", key=f"{room}_light_set"):
-            requests.post(f"{API_URL}/smart_home/lights/set", json={"room": room, "brightness": brightness})
+    if thresholds:
+        new_wind = st.slider("💨 Limit wiatru [km/h]", 0, 150, thresholds["WIND_LIMIT"])
+        new_ac = st.slider("❄️ Temp. klimatyzacji [°C]", 20, 45, thresholds["AC_TEMP_LIMIT"])
+        new_hot_temp = st.slider("🌡 Temp. gorąco [°C]", 20, 40, thresholds["HOT_TEMP_THRESHOLD"])
+        new_cold_temp = st.slider("🌡 Temp. zimno [°C]", -10, 20, thresholds["COLD_TEMP_THRESHOLD"])
+        new_sun = st.slider("🌞 Lux słońca (zimno-słonecznie)", 0, 50000, thresholds["SUN_LUX_THRESHOLD"])
+        new_light_bright = st.slider("💡 Lux jasne światło", 0, 50000, thresholds["LIGHT_BRIGHT_THRESHOLD"])
 
-        col1, col2 = st.columns(2)
-        with col1:
-            if st.button("⬆ +10%", key=f"{room}_light_up"):
-                requests.post(f"{API_URL}/smart_home/lights/adjust", json={"room": room, "delta": 10})
-        with col2:
-            if st.button("⬇ -10%", key=f"{room}_light_down"):
-                requests.post(f"{API_URL}/smart_home/lights/adjust", json={"room": room, "delta": -10})
-
-        st.write(f"Aktualna jasność: {current_brightness}%")
-
-# ---------------- AIR CONDITIONING ----------------
-st.header("❄️ Sterowanie klimatyzacją")
-
-for room in rooms:
-    st.subheader(room.replace("_", " ").title())
-
-    try:
-        state = requests.get(f"{API_URL}/smart_home", timeout=2).json()
-        ac_on = state["ac"].get(room, False)
-        ac_auto = state.get("ac_auto_active", False)
-    except:
-        ac_on = False
-        ac_auto = False
-
-    if ac_auto:
-        st.info("ℹ️ Klimatyzacja automatycznie włączona (temp. > 35°C) – możesz ją wyłączyć ręcznie.")
-
-    ac_state = st.toggle("Klimatyzacja", value=ac_on, key=f"{room}_ac")
-    if st.button(f"📌 Zmień AC {room}", key=f"{room}_ac_set"):
-        requests.post(f"{API_URL}/smart_home/ac/set", json={"room": room, "state": ac_state})
+        if st.button("📌 Zapisz progi"):
+            r = requests.post(
+                f"{API_URL}/smart_home/thresholds/set",
+                json={
+                    "WIND_LIMIT": new_wind,
+                    "AC_TEMP_LIMIT": new_ac,
+                    "HOT_TEMP_THRESHOLD": new_hot_temp,
+                    "COLD_TEMP_THRESHOLD": new_cold_temp,
+                    "SUN_LUX_THRESHOLD": new_sun,
+                    "LIGHT_BRIGHT_THRESHOLD": new_light_bright,
+                },
+                timeout=2,
+            )
+            if r.status_code == 200:
+                st.success("Progi zapisane ✅")
+            else:
+                st.error(f"Błąd API: {r.text}")
