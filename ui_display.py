@@ -110,3 +110,24 @@ for room in rooms:
                 requests.post(f"{API_URL}/smart_home/lights/adjust", json={"room": room, "delta": -10})
 
         st.write(f"Aktualna jasność: {current_brightness}%")
+
+# ---------------- AIR CONDITIONING ----------------
+st.header("❄️ Sterowanie klimatyzacją")
+
+for room in rooms:
+    st.subheader(room.replace("_", " ").title())
+
+    try:
+        state = requests.get(f"{API_URL}/smart_home", timeout=2).json()
+        ac_on = state["ac"].get(room, False)
+        ac_auto = state.get("ac_auto_active", False)
+    except:
+        ac_on = False
+        ac_auto = False
+
+    if ac_auto:
+        st.info("ℹ️ Klimatyzacja automatycznie włączona (temp. > 35°C) – możesz ją wyłączyć ręcznie.")
+
+    ac_state = st.toggle("Klimatyzacja", value=ac_on, key=f"{room}_ac")
+    if st.button(f"📌 Zmień AC {room}", key=f"{room}_ac_set"):
+        requests.post(f"{API_URL}/smart_home/ac/set", json={"room": room, "state": ac_state})

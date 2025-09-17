@@ -14,6 +14,8 @@ class SmartHomeSystems:
     LIGHT_DARK_THRESHOLD = 5000    # lux – poniżej jest ciemno
     LIGHT_MIN = 70                 # min jasność, gdy ciemno
 
+    AC_TEMP_LIMIT = 35  # °C – powyżej tej temperatury klimatyzacja włącza się automatycznie
+
     def __init__(self):
         # rolety w procentach: 0 = zamknięta, 100 = otwarta
         self.blinds = {
@@ -29,6 +31,9 @@ class SmartHomeSystems:
         self.current_wind = 0
         self.current_temp = 20
         self.current_sunlight = 20000
+        # aktualny stan klimatyzacji
+        self.ac = {room: False for room in self.blinds}  # False = wyłączona, True = włączona
+
 
     # ---------------------- Aktualizacja pogody ----------------------
     def update_weather(self, temperature: float, sunlight_lux: float, wind_kph: float):
@@ -36,6 +41,12 @@ class SmartHomeSystems:
         self.current_temp = temperature
         self.current_sunlight = sunlight_lux
         self.current_wind = wind_kph
+
+        # 🌬 Automatyczne włączenie AC przy upale
+        if self.current_temp > self.AC_TEMP_LIMIT:
+            for room in self.ac:
+                if not self.ac[room]:  # tylko jeśli było wyłączone
+                    self.ac[room] = True
 
         # 1️⃣ Blokada wiatrowa – rolety max 30%
         if self.current_wind >= self.WIND_LIMIT:
@@ -150,17 +161,33 @@ class SmartHomeSystems:
             return True
         return False
 
+ # ---------------------- Klimatyzacja ----------------------
+    def set_ac(self, room: str, state: bool):
+        """Włącz/wyłącz klimatyzację ręcznie (zawsze dozwolone)."""
+        if room in self.ac:
+            self.ac[room] = state
+            return True
+        return False
+
+    def toggle_ac(self, room: str):
+        """Przełącznik klimatyzacji on/off."""
+        if room in self.ac:
+            self.ac[room] = not self.ac[room]
+            return True
+        return False
+
     # ---------------------- Pobranie stanu ----------------------
     def get_state(self):
-        light_limit_active = self.current_sunlight > self.LIGHT_BRIGHT_THRESHOLD
         return {
             "blinds": self.blinds.copy(),
             "slats": self.slats.copy(),
             "lights": self.lights.copy(),
+            "ac": self.ac.copy(),
             "wind_limit_active": self.current_wind >= self.WIND_LIMIT,
             "cold_sunny_limit_active": self.current_temp < self.COLD_TEMP_THRESHOLD
                                         and self.current_sunlight > self.SUN_LUX_THRESHOLD,
             "hot_sunny_limit_active": self.current_temp > self.HOT_TEMP_THRESHOLD
                                         and self.current_sunlight > self.HOT_SUN_LUX_THRESHOLD,
-            "light_limit_active": light_limit_active
+            "light_limit_active": self.current_sunlight > self.LIGHT_BRIGHT_THRESHOLD,
+            "ac_auto_active": self.current_temp > self.AC_TEMP_LIMIT
         }

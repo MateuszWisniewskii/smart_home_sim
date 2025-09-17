@@ -83,6 +83,21 @@ def adjust_light(params: dict):
     success = smart_home.adjust_light(room, delta)
     return {"status": "ok" if success else "error", "lights": smart_home.get_state()["lights"]}
 
+# ---------------------- AIR CONDITIONING ----------------------
+@app.post("/smart_home/ac/set")
+def set_ac(params: dict):
+    room = params.get("room")
+    state = params.get("state", False)
+    success = smart_home.set_ac(room, state)
+    return {"status": "ok" if success else "error", "ac": smart_home.get_state()["ac"]}
+
+@app.post("/smart_home/ac/toggle")
+def toggle_ac(params: dict):
+    room = params.get("room")
+    success = smart_home.toggle_ac(room)
+    return {"status": "ok" if success else "error", "ac": smart_home.get_state()["ac"]}
+
+
 if __name__ == "__main__":
     uvicorn.run(app, host="127.0.0.1", port=8000)
 
