@@ -40,8 +40,8 @@ class SmartHomeSystems:
         # 1️⃣ Blokada wiatrowa – rolety max 30%
         if self.current_wind >= self.WIND_LIMIT:
             for room in self.blinds:
-                if self.blinds[room] > 30:
-                    self.blinds[room] = 30
+                if self.blinds[room] > 0:
+                    self.blinds[room] = 0
 
         # 2️⃣ Zimno i słonecznie – rolety max 30%
         elif self.current_temp < self.COLD_TEMP_THRESHOLD and self.current_sunlight > self.SUN_LUX_THRESHOLD:
@@ -54,6 +54,11 @@ class SmartHomeSystems:
             for room in self.blinds:
                 if self.blinds[room] < self.HOT_MIN_POSITION:
                     self.blinds[room] = self.HOT_MIN_POSITION
+
+            # 🌞 Bardzo jasno → światła gaśnie do 0%
+        elif self.current_sunlight > self.LIGHT_BRIGHT_THRESHOLD:
+            for room in self.lights:
+                self.lights[room] = 0
 
     # ---------------------- Rolety góra-dół ----------------------
     def set_blind(self, room: str, position: int):
@@ -98,12 +103,11 @@ class SmartHomeSystems:
     def set_light(self, room: str, brightness: int):
         """Ustawienie jasności światła w 0-100%."""
         if room in self.lights and 0 <= brightness <= 100:
-            # bardzo jasno → max 30%
+            # Bardzo jasno → światła gasną
             if self.current_sunlight > self.LIGHT_BRIGHT_THRESHOLD:
-                brightness = min(brightness, self.LIGHT_MAX)
-
-            # bardzo ciemno → min 70%
-            if self.current_sunlight < self.LIGHT_DARK_THRESHOLD:
+                brightness = 0
+            # Bardzo ciemno → min 70%
+            elif self.current_sunlight < self.LIGHT_DARK_THRESHOLD:
                 brightness = max(brightness, self.LIGHT_MIN)
 
             self.lights[room] = brightness
@@ -115,12 +119,11 @@ class SmartHomeSystems:
         if room in self.lights:
             new_brightness = self.lights[room] + delta
 
-            # bardzo jasno → max 30%
+            # Bardzo jasno → światła gasną
             if self.current_sunlight > self.LIGHT_BRIGHT_THRESHOLD:
-                new_brightness = min(new_brightness, self.LIGHT_MAX)
-
-            # bardzo ciemno → min 70%
-            if self.current_sunlight < self.LIGHT_DARK_THRESHOLD:
+                new_brightness = 0
+            # Bardzo ciemno → min 70%
+            elif self.current_sunlight < self.LIGHT_DARK_THRESHOLD:
                 new_brightness = max(new_brightness, self.LIGHT_MIN)
 
             self.lights[room] = max(0, min(100, new_brightness))
