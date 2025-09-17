@@ -11,7 +11,8 @@ st_autorefresh(interval=5000, key="refresh")
 
 st.title("🏠 Smart Home Dashboard")
 
-tab1, tab2 = st.tabs(["📊 Panel", "⚙️ Ustawienia progów"])
+tab1, tab2, tab3 = st.tabs(["📊 Panel", "⚙️ Ustawienia progów", "🏠 Pokoje"])
+
 
 rooms = ["living_room", "bedroom", "kitchen"]
 
@@ -53,7 +54,11 @@ with tab1:
         col4.metric("☁️ Zachmurzenie [%]", weather["cloud_pct"])
         col5.metric("🌞 Światło [lux]", weather["sunlight_lux"])
         col6.metric("🌧 Opady [mm]", weather["precipitation_mm"])
-
+    # ------------------- DYNAMICZNE POKOJE -------------------
+    try:
+        rooms = requests.get(f"{API_URL}/smart_home/rooms", timeout=2).json()["rooms"]
+    except:
+        rooms = []
     # ---------------- BLINDS ----------------
     st.header("🪟 Sterowanie roletami")
     for room in rooms:
@@ -147,3 +152,22 @@ with tab2:
                 st.success("Progi zapisane ✅")
             else:
                 st.error(f"Błąd API: {r.text}")
+# ------------------- ZAKŁADKA POKOI -------------------
+with tab3:
+    st.header("🏠 Zarządzanie pokojami")
+    try:
+        rooms_data = requests.get(f"{API_URL}/smart_home/rooms", timeout=2).json()
+        rooms = rooms_data["rooms"]
+    except:
+        rooms = []
+
+    st.write("📋 Aktualne pokoje:", ", ".join(rooms) if rooms else "brak")
+
+    new_room = st.text_input("➕ Dodaj nowy pokój")
+    if st.button("Dodaj pokój"):
+        if new_room:
+            requests.post(f"{API_URL}/smart_home/rooms/add", json={"room": new_room})
+
+    remove_room = st.selectbox("❌ Usuń pokój", rooms) if rooms else None
+    if remove_room and st.button("Usuń pokój"):
+        requests.post(f"{API_URL}/smart_home/rooms/remove", json={"room": remove_room})

@@ -16,6 +16,9 @@ class SmartHomeSystems:
             "AC_TEMP_LIMIT": 35
         }
 
+        # 🔹 Lista pokoi dynamiczna
+        self.rooms = ["living_room", "bedroom", "kitchen"]
+
         # ---- stany urządzeń ----
         self.blinds = { "living_room": 0, "bedroom": 0, "kitchen": 0 }
         self.slats = {room: 50 for room in self.blinds}
@@ -174,6 +177,28 @@ class SmartHomeSystems:
     def toggle_manual_override(self):
         self.manual_override = not self.manual_override
         return self.manual_override
+
+    # ---------------- Pokoje ----------------
+    def get_rooms(self):
+        return self.rooms.copy()
+
+    def add_room(self, room: str):
+        if room not in self.rooms:
+            self.rooms.append(room)
+            self.blinds[room] = 0
+            self.slats[room] = 50
+            self.lights[room] = 0
+            self.ac[room] = False
+        return self.get_rooms()
+
+    def remove_room(self, room: str):
+        if room in self.rooms:
+            self.rooms.remove(room)
+            self.blinds.pop(room, None)
+            self.slats.pop(room, None)
+            self.lights.pop(room, None)
+            self.ac.pop(room, None)
+        return self.get_rooms()
 
     # ---------------------- Pobranie stanu ----------------------
     def get_state(self):
