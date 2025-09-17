@@ -68,10 +68,10 @@ def adjust_blind(params: dict):
 
 # ---------------------- LIGHTS ----------------------
 @app.post("/smart_home/lights/set")
-def adjust_light(params: dict):
+def set_light(params: dict):
     room = params.get("room")
     brightness = params.get("brightness", 0)
-    success = smart_home.adjust_light(room, brightness)
+    success = smart_home.set_light(room, brightness)
     return {"status": "ok" if success else "error", "lights": smart_home.get_state()["lights"]}
 
 
