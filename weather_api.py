@@ -55,13 +55,6 @@ def get_smart_home_state():
 @app.post("/smart_home/blinds/set")
 def set_blind(params: dict):
     room = params.get("room")
-    position = params.get("position")  # "open" lub "closed"
-    success = smart_home.set_blind(room, position)
-    return {"status": "ok" if success else "error", "blinds": smart_home.get_state()["blinds"]}
-
-@app.post("/smart_home/blinds/set")
-def set_blind(params: dict):
-    room = params.get("room")
     position = params.get("position")  # liczba 0-100
     success = smart_home.set_blind(room, position)
     return {"status": "ok" if success else "error", "blinds": smart_home.get_state()["blinds"]}
