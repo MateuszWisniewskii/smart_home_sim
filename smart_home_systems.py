@@ -149,13 +149,15 @@ class SmartHomeSystems:
 
     # ---------------------- Pobranie stanu ----------------------
     def get_state(self):
+        light_limit_active = self.current_sunlight > self.LIGHT_BRIGHT_THRESHOLD
         return {
             "blinds": self.blinds.copy(),
             "slats": self.slats.copy(),
             "lights": self.lights.copy(),
             "wind_limit_active": self.current_wind >= self.WIND_LIMIT,
             "cold_sunny_limit_active": self.current_temp < self.COLD_TEMP_THRESHOLD
-                                         and self.current_sunlight > self.SUN_LUX_THRESHOLD,
+                                        and self.current_sunlight > self.SUN_LUX_THRESHOLD,
             "hot_sunny_limit_active": self.current_temp > self.HOT_TEMP_THRESHOLD
-                                         and self.current_sunlight > self.HOT_SUN_LUX_THRESHOLD
+                                        and self.current_sunlight > self.HOT_SUN_LUX_THRESHOLD,
+            "light_limit_active": light_limit_active
         }
