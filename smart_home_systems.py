@@ -26,6 +26,9 @@ class SmartHomeSystems:
         self.current_temp = 20
         self.current_sunlight = 20000
 
+        # 🔒 flaga blokady automatyki
+        self.manual_override = False
+
     # ---------------------- konfiguracja progów ----------------------
     def get_thresholds(self):
         return self.thresholds.copy()
@@ -41,6 +44,10 @@ class SmartHomeSystems:
         self.current_temp = temperature
         self.current_sunlight = sunlight_lux
         self.current_wind = wind_kph
+
+        if self.manual_override:
+            # 🔒 automatyka wyłączona – nic nie robimy
+            return
 
         # 1️⃣ Blokada wiatrowa – rolety chowają się
         if self.current_wind >= self.thresholds["WIND_LIMIT"]:
@@ -159,6 +166,15 @@ class SmartHomeSystems:
             return True
         return False
 
+    # ---------------------- tryb manualny ----------------------
+    def set_manual_override(self, state: bool):
+        self.manual_override = state
+        return self.manual_override
+
+    def toggle_manual_override(self):
+        self.manual_override = not self.manual_override
+        return self.manual_override
+
     # ---------------------- Pobranie stanu ----------------------
     def get_state(self):
         return {
@@ -166,12 +182,13 @@ class SmartHomeSystems:
             "slats": self.slats.copy(),
             "lights": self.lights.copy(),
             "ac": self.ac.copy(),
-            "wind_limit_active": self.current_wind >= self.thresholds["WIND_LIMIT"],
-            "cold_sunny_limit_active": self.current_temp < self.thresholds["COLD_TEMP_THRESHOLD"]
-                                        and self.current_sunlight > self.thresholds["SUN_LUX_THRESHOLD"],
-            "hot_sunny_limit_active": self.current_temp > self.thresholds["HOT_TEMP_THRESHOLD"]
-                                        and self.current_sunlight > self.thresholds["HOT_SUN_LUX_THRESHOLD"],
-            "light_limit_active": self.current_sunlight > self.thresholds["LIGHT_BRIGHT_THRESHOLD"],
-            "ac_auto_active": self.current_temp > self.thresholds["AC_TEMP_LIMIT"],
+            "manual_override": self.manual_override,
+            "wind_limit_active": not self.manual_override and self.current_wind >= self.thresholds["WIND_LIMIT"],
+            "cold_sunny_limit_active": not self.manual_override and self.current_temp < self.thresholds["COLD_TEMP_THRESHOLD"]
+                                            and self.current_sunlight > self.thresholds["SUN_LUX_THRESHOLD"],
+            "hot_sunny_limit_active": not self.manual_override and self.current_temp > self.thresholds["HOT_TEMP_THRESHOLD"]
+                                            and self.current_sunlight > self.thresholds["HOT_SUN_LUX_THRESHOLD"],
+            "light_limit_active": not self.manual_override and self.current_sunlight > self.thresholds["LIGHT_BRIGHT_THRESHOLD"],
+            "ac_auto_active": not self.manual_override and self.current_temp > self.thresholds["AC_TEMP_LIMIT"],
             "thresholds": self.get_thresholds()
         }
