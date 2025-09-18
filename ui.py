@@ -3,15 +3,14 @@ import requests
 import random
 from datetime import datetime
 
-API_URL = "http://127.0.0.1:8000/weather"
+API_URL_WEATHER = "http://127.0.0.1:8000/weather"
+API_URL_SMART_HOME = "http://127.0.0.1:8000/smart_home"
 
 st.set_page_config(page_title="Smart Home Dashboard", layout="wide")
-
 st.title("🏠 Smart Home Dashboard")
 
-# ---------------- MANUAL CONTROL ----------------
+# ---------------- MANUAL WEATHER CONTROL ----------------
 st.sidebar.header("🛠 Sterowanie pogodą")
-
 temp = st.sidebar.slider("Temperatura [°C]", -20, 40, 20)
 humidity = st.sidebar.slider("Wilgotność [%]", 0, 100, 50)
 clouds = st.sidebar.slider("Zachmurzenie [%]", 0, 100, 20)
@@ -22,7 +21,7 @@ precip = st.sidebar.slider("Opady [mm]", 0, 100, 0)
 if st.sidebar.button("Zastosuj ręcznie"):
     try:
         requests.post(
-            "http://127.0.0.1:8000/weather/set",
+            f"{API_URL_WEATHER}/set",
             json={
                 "temperature": temp,
                 "humidity": humidity,
@@ -37,12 +36,10 @@ if st.sidebar.button("Zastosuj ręcznie"):
     except Exception as e:
         st.sidebar.error(f"Błąd: {e}")
 
-
 # ---------------- WEATHER ----------------
 st.header("🌦 Pogoda (z symulatora)")
-
 try:
-    weather = requests.get(API_URL, timeout=2).json()
+    weather = requests.get(API_URL_WEATHER, timeout=2).json()
 except Exception as e:
     st.error(f"Błąd w pobieraniu pogody: {e}")
     weather = None
@@ -58,26 +55,39 @@ if weather:
     col5.metric("🌞 Światło [lux]", weather["sunlight_lux"])
     col6.metric("🌧 Opady [mm]", weather["precipitation_mm"])
 
-    # ---------------- TEMPERATURE SENSORS ----------------
-    st.subheader("🌡 Temperatury z różnych czujników")
+# ---------------- VENTILATION / VOC ----------------
+st.header("🌬 Wentylacja (VOC)")
 
-    base_temp = weather["temperature"]
+if "ventilation" not in st.session_state:
+    # Pobieramy aktualny stan wentylacji z API
+    try:
+        vent_state = requests.get(f"{API_URL_SMART_HOME}/ventilation", timeout=2).json()
+        st.session_state.ventilation = vent_state.get("ventilation_level", 0)
+    except:
+        st.session_state.ventilation = 0
 
-    temps = {
-        "Północ": base_temp - random.uniform(1.0, 2.5),
-        "Południe": base_temp + random.uniform(1.0, 3.0),
-        "Wschód": base_temp + random.uniform(-1.0, 1.5),
-        "Zachód": base_temp + random.uniform(-1.0, 1.5),
-        "Wewnątrz": base_temp + random.uniform(-0.5, 0.5),
-    }
+voc_value = st.slider("VOC [0–500]", 0, 500, 50)
 
-    c1, c2, c3, c4, c5 = st.columns(5)
-    c1.metric("🌡 Północ", round(temps["Północ"], 1))
-    c2.metric("🌡 Południe", round(temps["Południe"], 1))
-    c3.metric("🌡 Wschód", round(temps["Wschód"], 1))
-    c4.metric("🌡 Zachód", round(temps["Zachód"], 1))
-    c5.metric("🏠 Wewnątrz", round(temps["Wewnątrz"], 1))
+vent_level = st.slider(
+    "Poziom wentylacji (0–5)", 0, 5, st.session_state.ventilation
+)
 
+if st.button("📌 Ustaw wentylację"):
+    try:
+        # Wysyłamy wartość VOC, co ustawi automatycznie wentylację w backendzie
+        requests.post(
+            f"{API_URL_WEATHER}/voc/set",
+            json={"voc": voc_value},
+            timeout=2
+        )
+        # Pobieramy nowy poziom wentylacji z API
+        vent_state = requests.get(f"{API_URL_SMART_HOME}/ventilation", timeout=2).json()
+        st.session_state.ventilation = vent_state.get("ventilation_level", 0)
+        st.success(f"Poziom wentylacji ustawiony na {st.session_state.ventilation} ✅")
+    except Exception as e:
+        st.error(f"Błąd: {e}")
+
+st.write("Aktualny poziom wentylacji:", st.session_state.ventilation)
 
 # ---------------- LIGHTING ----------------
 st.header("💡 Oświetlenie")
@@ -92,7 +102,6 @@ if st.button("Przełącz światło"):
     st.session_state.light_on = not st.session_state.light_on
 
 st.write("Stan:", "🔆 Włączone" if st.session_state.light_on else "🌑 Wyłączone")
-
 
 # ---------------- HVAC ----------------
 st.header("❄️ HVAC (Ogrzewanie/Chłodzenie)")
@@ -112,98 +121,49 @@ if weather:
         hvac_status = "⏸ Wentylacja"
 st.write("Status:", hvac_status)
 
-
-# ---------------- MONITORING ----------------
-st.header("📹 Monitoring / Alarm")
+# ---------------- MONITORING / ACCESS / ROOMS ----------------
+st.header("📹 Monitoring / Alarm / Zamek")
 if "alarm_on" not in st.session_state:
     st.session_state.alarm_on = False
-
 if st.button("Przełącz alarm"):
     st.session_state.alarm_on = not st.session_state.alarm_on
-
 st.write("Stan:", "🚨 Alarm aktywny" if st.session_state.alarm_on else "✅ Alarm wyłączony")
 
-
-# ---------------- ACCESS ----------------
-st.header("🚪 Dostęp (Zamek)")
 if "door_locked" not in st.session_state:
     st.session_state.door_locked = True
-
 if st.button("Przełącz zamek"):
     st.session_state.door_locked = not st.session_state.door_locked
-
 st.write("Stan drzwi:", "🔒 Zamknięte" if st.session_state.door_locked else "🔓 Otwarte")
 
-
-# ---------------- ROOMS ----------------
-st.header("🏠 Pokoje i czujniki")
-
+# ---------------- BLINDS ----------------
+st.header("🪟 Rolety zewnętrzne")
 rooms = ["Pokój dziecka 1", "Pokój dziecka 2", "Salon", "Sypialnia", "Kuchnia", "Łazienka"]
 
-if weather:
-    tabs = st.tabs(rooms)
-
-    for i, room in enumerate(rooms):
-        with tabs[i]:
-            st.subheader(room)
-
-            # Symulacja danych dla danego pokoju
-            room_temp = weather["temperature"] + random.uniform(-2, 2)
-            room_hum = weather["humidity"] + random.uniform(-5, 5)
-
-            # Sesyjny stan dla światła i drzwi w danym pokoju
-            key_light = f"light_{i}"
-            key_door = f"door_{i}"
-            if key_light not in st.session_state:
-                st.session_state[key_light] = False
-            if key_door not in st.session_state:
-                st.session_state[key_door] = True
-
-            col1, col2 = st.columns(2)
-            col1.metric("🌡 Temperatura [°C]", round(room_temp, 1))
-            col2.metric("💧 Wilgotność [%]", round(room_hum, 1))
-
-            st.write("💡 Oświetlenie:", "🔆 Włączone" if st.session_state[key_light] else "🌑 Wyłączone")
-            if st.button("Przełącz światło", key=f"btn_light_{i}"):
-                st.session_state[key_light] = not st.session_state[key_light]
-
-            st.write("🚪 Drzwi:", "🔒 Zamknięte" if st.session_state[key_door] else "🔓 Otwarte")
-            if st.button("Przełącz drzwi", key=f"btn_door_{i}"):
-                st.session_state[key_door] = not st.session_state[key_door]
-
-# ---------------- BLINDS (ROLETS) ----------------
-st.header("🪟 Rolety zewnętrzne")
+if "blinds" not in st.session_state:
+    st.session_state.blinds = {room: 0 for room in rooms}
 
 if weather:
-    if "blinds" not in st.session_state:
-        # przechowujemy stan rolet dla każdego pokoju (0-100%)
-        st.session_state.blinds = {room: 0 for room in rooms}  
-
     for room in rooms:
         col1, col2 = st.columns([2, 1])
         with col1:
             st.write(f"**{room}**")
-
             # automatyczna logika
             wind = weather["wind_kph"]
             sun = weather["sunlight_lux"]
             temp = weather["temperature"]
-
             auto_level = None
-            if wind > 40:  
-                auto_level = 100   # zamykamy całkowicie
-            elif temp < 10 and sun > 15000:  
-                auto_level = 0     # otwieramy na maxa
-            elif temp > 25 and sun > 20000:  
-                auto_level = 70    # przysłaniamy częściowo
-
+            if wind > 40:
+                auto_level = 100
+            elif temp < 10 and sun > 15000:
+                auto_level = 0
+            elif temp > 25 and sun > 20000:
+                auto_level = 70
             if auto_level is not None:
                 st.session_state.blinds[room] = auto_level
                 st.write("🤖 Tryb automatyczny:", auto_level, "%")
-
             # manual slider
             st.session_state.blinds[room] = st.slider(
-                f"Ustaw rolety ({room})", 
+                f"Ustaw rolety ({room})",
                 0, 100, st.session_state.blinds[room],
                 step=10, key=f"blind_{room}"
             )

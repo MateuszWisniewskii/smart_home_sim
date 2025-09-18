@@ -61,3 +61,22 @@ with col1:
         except Exception as e:
             st.error(f"Błąd: {e}")
 
+# ------------------- AIR QUALITY CONTROL -------------------
+st.header("🌬 Jakość powietrza (VOC)")
+
+voc_value = st.slider("VOC [0–500]", 0, 500, 50)
+
+if st.button("📌 Ustaw VOC"):
+    try:
+        r = requests.post(
+            f"{API_URL}/weather/set",
+            json={"voc": voc_value},  # tylko VOC
+            timeout=2,
+        )
+        if r.status_code == 200:
+            state = r.json()
+            st.success(f"VOC ustawione na {voc_value} ✅\nWentylacja ustawiona automatycznie na poziom {state.get('ventilation_auto_level', 'N/A')}")
+        else:
+            st.error(f"Błąd API: {r.text}")
+    except Exception as e:
+        st.error(f"Błąd: {e}")

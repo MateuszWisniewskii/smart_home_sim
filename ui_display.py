@@ -118,6 +118,35 @@ with tab1:
         if st.button(f"📌 Zmień AC {room}", key=f"{room}_ac_set"):
             requests.post(f"{API_URL}/smart_home/ac/set", json={"room": room, "state": ac_state})
 
+        # ---------------- VENTILATION ----------------
+    st.header("🌬 Sterowanie wentylacją")
+    for room in rooms:
+        st.subheader(room.replace("_", " ").title())
+        try:
+            state = requests.get(f"{API_URL}/smart_home", timeout=2).json()
+            vent_level = state["ventilation"].get(room, 0)  # 0–5
+            vent_auto = state.get("ventilation_auto_active", False)
+        except:
+            vent_level = 0
+            vent_auto = False
+
+        if vent_auto:
+            st.info("ℹ️ Wentylacja automatycznie sterowana (możesz ją zmienić).")
+
+        new_level = st.slider(
+            "Siła nawiewu (0=off, 5=maks)",
+            0,
+            5,
+            vent_level,
+            key=f"{room}_vent_level"
+        )
+        if st.button(f"📌 Ustaw wentylację {room}", key=f"{room}_vent_set"):
+            requests.post(
+                f"{API_URL}/smart_home/ventilation/set",
+                json={"room": room, "level": new_level}
+            )
+
+
 # ---------------- TAB 2: THRESHOLDS ----------------
 with tab2:
     st.header("⚙️ Konfiguracja progów automatyki")
@@ -152,6 +181,7 @@ with tab2:
                 st.success("Progi zapisane ✅")
             else:
                 st.error(f"Błąd API: {r.text}")
+
 # ------------------- ZAKŁADKA POKOI -------------------
 with tab3:
     st.header("🏠 Zarządzanie pokojami")
